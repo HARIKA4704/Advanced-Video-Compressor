@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Compressor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl">
+        <h1 class="text-2xl font-bold mb-6 text-center">Video Compressor</h1>
+        <form id="upload-form" enctype="multipart/form-data" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Select Videos</label>
+                <input type="file" name="video" multiple accept="video/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Resolution</label>
+                <select name="resolution" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="1280x720">1280x720 (HD)</option>
+                    <option value="1920x1080">1920x1080 (Full HD)</option>
+                    <option value="854x480">854x480 (SD)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">CRF (Quality: Lower is better)</label>
+                <input type="number" name="crf" value="27" min="0" max="51" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Codec</label>
+                <select name="codec" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="libx264">H.264 (libx264)</option>
+                    <option value="libx265">H.265 (libx265)</option>
+                </select>
+            </div>
+            <button type="submit" class="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700">Upload & Compress</button>
+        </form>
+        <div id="progress-container" class="mt-6 space-y-4"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('upload-form');
+        const progressContainer = document.getElementById('progress-container');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            progressContainer.innerHTML = '';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const files = await response.json();
+
+                files.forEach(file => {
+                    const progressDiv = document.createElement('div');
+                    progressDiv.className = 'bg-gray-200 p-4 rounded';
+                    progressDiv.innerHTML = `
+                        <p class="font-medium">${file.filename}</p>
+                        <p class="text-sm">Compression: <span id="compress-${file.filename}">0%</span></p>
+                        <div class="w-full bg-gray-300 rounded h-4 mt-1"><div id="compress-bar-${file.filename}" class="bg-blue-600 h-4 rounded" style="width: 0%"></div></div>
+                        <p class="text-sm mt-2">Upload: <span id="upload-${file.filename}">0%</span></p>
+                        <div class="w-full bg-gray-300 rounded h-4 mt-1"><div id="upload-bar-${file.filename}" class="bg-green-600 h-4 rounded" style="width: 0%"></div></div>
+                    `;
+                    progressContainer.appendChild(progressDiv);
+                    pollProgress(file.filename);
+                });
+            } catch (error) {
+                progressContainer.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+            }
+        });
+
+        async function pollProgress(filename) {
+            const compressSpan = document.getElementById(`compress-${filename}`);
+            const uploadSpan = document.getElementById(`upload-${filename}`);
+            const compressBar = document.getElementById(`compress-bar-${filename}`);
+            const uploadBar = document.getElementById(`upload-bar-${filename}`);
+
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/progress/${filename}`);
+                    const data = await response.json();
+
+                    compressSpan.textContent = `${data.compression}%`;
+                    compressBar.style.width = `${data.compression}%`;
+                    uploadSpan.textContent = `${data.upload}%`;
+                    uploadBar.style.width = `${data.upload}%`;
+
+                    if (data.compression === 100 && data.upload === 100) {
+                        clearInterval(interval);
+                        compressSpan.parentElement.innerHTML += ' <span class="text-green-500">Completed</span>';
+                    } else if (data.upload === -1) {
+                        clearInterval(interval);
+                        uploadSpan.parentElement.innerHTML += ' <span class="text-red-500">Upload Failed</span>';
+                    }
+                } catch (error) {
+                    clearInterval(interval);
+                    progressContainer.innerHTML += `<p class="text-red-500">Error polling progress for ${filename}</p>`;
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
