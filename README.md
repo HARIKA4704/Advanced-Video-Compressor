@@ -1,4 +1,4 @@
-# WEB_TO_TELE Bot
+# Advanced-Video-Compressor Bot
 
 This is a Flask-based web application that allows users to upload and compress videos before sending them to Telegram using the Telethon library.
 
@@ -13,8 +13,8 @@ This is a Flask-based web application that allows users to upload and compress v
 
 ### 1️⃣ Clone the Repository
 ```bash
-git clone https://github.com/HANU05Tele/WEB_TO_TELE.git
-cd WEB_TO_TELE
+git clone https://github.com/HARIKA4704/Advanced-Video-Compressor.git
+cd Advanced-Video-Compressor
 ```
 
 ### 2️⃣ Install Dependencies
